@@ -9,7 +9,6 @@
  * - batchSize         : numeric (10)       - Items per batch
  * - batchQueue        : string ("default") - Queue/connection for batch jobs
  * - batchItemsKey     : string ("items")   - Key in props containing struct to chunk
- * - batchIdKey        : string ("")        - Key to populate with chunk keys (optional)
  * - batchMaxAttempts  : numeric (2)        - Retry attempts per batch job
  * - batchBackoff      : numeric (60)       - Seconds between retries
  * - batchTimeout      : numeric (2400)     - Job timeout in seconds
@@ -44,7 +43,6 @@ component singleton threadsafe accessors="true" {
 		param props.batchSize = settings.defaultBatchSize;
 		param props.batchQueue = settings.defaultBatchQueue;
 		param props.batchItemsKey = "items";
-		param props.batchIdKey = "";
 		param props.batchCarryover = [];
 
 		// Guard: autoBatch disabled
@@ -86,7 +84,6 @@ component singleton threadsafe accessors="true" {
 		var jobName = listLast( job.whoami(), "." );
 		var jobMapping = job.whoami().replace( "models.", "" );
 		var itemsKey = props.batchItemsKey;
-		var idKey = props.batchIdKey;
 		var items = props[ itemsKey ];
 		var chunks = structChunk( items, props.batchSize );
 		var batchItems = [];
@@ -118,9 +115,6 @@ component singleton threadsafe accessors="true" {
 
 			// Standard batch props (override any carried over)
 			jobProps[ itemsKey ] = chunk;
-			if ( len( idKey ) ) {
-				jobProps[ idKey ] = chunk.keyArray();
-			}
 			jobProps.bBatchChild = true; // Flag as batch child
 			jobProps.batchIndex = idx;
 			jobProps.batchTotal = chunks.len();
