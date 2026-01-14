@@ -1,0 +1,31 @@
+# CommandBox
+.CommandBox/
+.commandbox/
+artifacts/
+testbox/
+modules/
+
+# Server files
+server.json
+server-*.json
+.cfconfig.json
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test results
+tests/results/
+
+# Build artifacts
+dist/
+build/
