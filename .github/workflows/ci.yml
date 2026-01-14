@@ -99,7 +99,9 @@ jobs:
           forgeboxAPIKey: ${{ secrets.FORGEBOX_API_KEY }}
 
       - name: Publish to ForgeBox
-        run: box publish
+        run: |
+          box config set endpoints.forgebox.APIToken=${{ secrets.FORGEBOX_API_KEY }}
+          box publish
 
       - name: Create GitHub Release
         if: success()
