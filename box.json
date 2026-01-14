@@ -3,7 +3,7 @@
 	"slug" : "cbq-autobatch",
 	"version" : "1.0.0",
 	"author" : "John Wilson",
-	"location" : "https://github.com/Daemach/cbq-autobatch",
+	"location" : "forgeboxStorage",
 	"homepage" : "https://github.com/Daemach/cbq-autobatch",
 	"documentation" : "https://github.com/Daemach/cbq-autobatch",
 	"repository" : {
