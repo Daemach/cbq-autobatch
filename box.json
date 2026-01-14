@@ -1,55 +1,55 @@
 {
-	"name" : "cbqAutoBatch",
-	"slug" : "cbq-autobatch",
-	"version" : "1.0.0",
-	"author" : "John Wilson",
-	"location" : "forgeboxStorage",
-	"homepage" : "https://github.com/Daemach/cbq-autobatch",
-	"documentation" : "https://github.com/Daemach/cbq-autobatch",
-	"repository" : {
-		"type" : "git",
-		"url" : "https://github.com/Daemach/cbq-autobatch.git"
-	},
-	"bugs" : "https://github.com/Daemach/cbq-autobatch/issues",
-	"shortDescription" : "Automatic job batching for cbq - split large jobs into smaller parallel batches",
-	"description" : "cbqAutoBatch provides automatic job batching capabilities for ColdBox cbq. When a job exceeds a configurable threshold, it automatically splits the workload into smaller parallel batches while preserving chained job execution.",
-	"type" : "modules",
-	"keywords" : [
-		"coldbox",
-		"module",
-		"cbq",
-		"queue",
-		"batch",
-		"jobs",
-		"parallel"
-	],
-	"license" : [
-		{
-			"type" : "MIT",
-			"url" : "https://opensource.org/licenses/MIT"
-		}
-	],
-	"contributors" : [],
-	"dependencies" : {
-		"cbq" : "^4.0.0"
-	},
-	"devDependencies" : {},
-	"engines" : {
-		"coldfusion" : ">=2018",
-		"lucee" : ">=5"
-	},
-	"private" : false,
-	"scripts" : {
-		"format" : "cfformat run models/**/*.cfc --overwrite",
-		"format:check" : "cfformat check models/**/*.cfc"
-	},
-	"ignore" : [
-		"**/.*",
-		"test*/**",
-		"tests/**"
-	],
-	"installPaths" : {},
-	"testbox" : {
-		"runner" : "http://localhost/tests/runner.cfm"
-	}
+    "name":"cbqAutoBatch",
+    "slug":"cbq-autobatch",
+    "version":"1.0.1",
+    "author":"John Wilson",
+    "location":"forgeboxStorage",
+    "homepage":"https://github.com/Daemach/cbq-autobatch",
+    "documentation":"https://github.com/Daemach/cbq-autobatch",
+    "repository":{
+        "type":"git",
+        "url":"https://github.com/Daemach/cbq-autobatch.git"
+    },
+    "bugs":"https://github.com/Daemach/cbq-autobatch/issues",
+    "shortDescription":"Automatic job batching for cbq - split large jobs into smaller parallel batches",
+    "description":"cbqAutoBatch provides automatic job batching capabilities for ColdBox cbq. When a job exceeds a configurable threshold, it automatically splits the workload into smaller parallel batches while preserving chained job execution.",
+    "type":"modules",
+    "keywords":[
+        "coldbox",
+        "module",
+        "cbq",
+        "queue",
+        "batch",
+        "jobs",
+        "parallel"
+    ],
+    "license":[
+        {
+            "type":"MIT",
+            "url":"https://opensource.org/licenses/MIT"
+        }
+    ],
+    "contributors":[],
+    "dependencies":{
+        "cbq":"^4.0.0"
+    },
+    "devDependencies":{},
+    "engines":{
+        "coldfusion":">=2018",
+        "lucee":">=5"
+    },
+    "private":false,
+    "scripts":{
+        "format":"cfformat run models/**/*.cfc --overwrite",
+        "format:check":"cfformat check models/**/*.cfc"
+    },
+    "ignore":[
+        "**/.*",
+        "test*/**",
+        "tests/**"
+    ],
+    "installPaths":{},
+    "testbox":{
+        "runner":"http://localhost/tests/runner.cfm"
+    }
 }
