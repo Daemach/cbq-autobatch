@@ -1,4 +1,4 @@
-# cbqAutoBatch
+# CBQ AutoBatch
 
 Automatic job batching for ColdBox cbq. When a job exceeds a configurable item threshold, it automatically splits the workload into smaller parallel batches while preserving chained job execution.
 
