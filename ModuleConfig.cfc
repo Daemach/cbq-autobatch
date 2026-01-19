@@ -3,7 +3,7 @@ component {
 	this.name         = "cbq-autobatch";
 	this.author       = "John Wilson";
 	this.webUrl       = "https://github.com/Daemach/cbq-autobatch";
-	this.cfmapping    = "cbqAutoBatch";
+	this.cfmapping    = "cbq-autobatch";
 	this.dependencies = [ "cbq" ];
 
 	function configure() {

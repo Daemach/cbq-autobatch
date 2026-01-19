@@ -23,7 +23,7 @@ Inject the AutoBatch service and configure via props:
 ```cfml
 component extends="cbq.models.Jobs.AbstractJob" {
 
-    property name="autoBatch" inject="AutoBatch@cbqAutoBatch";
+    property name="autoBatch" inject="AutoBatch@cbq-autobatch";
 
     function handle() {
         var props = getProperties();
