@@ -31,8 +31,7 @@ component extends="cbq.models.Jobs.AbstractJob" {
         // Batch configuration - all in props
         param props.autoBatch     = true;
         param props.batchSize     = 20;
-        param props.batchItemsKey = "accounts";   // key containing struct to chunk
-        param props.batchIdKey    = "accountIDs"; // key to populate with chunk keys
+        param props.batchItemsKey = "accounts"; // key containing struct to chunk
 
         // ... resolve your items ...
         props.accounts = loadAccounts();
@@ -60,12 +59,12 @@ All configuration lives in props (with sensible defaults):
 | `batchSize` | `10` | Items per batch |
 | `batchQueue` | `"default"` | Queue/connection for batch jobs |
 | `batchItemsKey` | `"items"` | Key in props containing struct to chunk |
-| `batchIdKey` | `""` | Key to populate with chunk keys (optional) |
 | `batchMaxAttempts` | `2` | Retry attempts per batch job |
 | `batchBackoff` | `60` | Seconds between retries |
-| `batchTimeout` | `2400` | Job timeout in seconds |
+| `batchJobTimeout` | `2400` | Individual job timeout in seconds (40 min) |
 | `batchAllowFailures` | `true` | Continue batch if some jobs fail |
-| `batchFinally` | - | Job/chain to append after chained jobs complete |
+| `batchThen` | - | Job/chain to run immediately after batch, before chained jobs |
+| `batchFinally` | - | Job/chain to run after all chained jobs complete |
 | `batchCarryover` | `[]` | Props to pass to children; if empty, passes ALL props |
 
 #### Output Props (added to child jobs)
@@ -76,21 +75,57 @@ All configuration lives in props (with sensible defaults):
 | `batchIndex` | `1-N` | 1-based index of this chunk |
 | `batchTotal` | `N` | Total number of chunks |
 
-### Adding a Finally Job
+### Execution Order
 
-Use `batchFinally` in props to append a job after all chained jobs:
+When a batch completes, jobs run in this order:
+
+1. **`batchThen`** - Runs immediately after batch completes
+2. **Chained jobs** - Any jobs attached via `.chain()` on the original job
+3. **`batchFinally`** - Runs after all chained jobs complete
+
+```text
+Batch completes → batchThen → chained jobs → batchFinally
+```
+
+### Using batchThen and batchFinally
+
+Both `batchThen` and `batchFinally` accept multiple formats:
+
+#### Single Job Object
 
 ```cfml
-// Single job object
+props.batchThen = cbq.job( "reports.aggregate", { accountIDs : props.accountIDs } );
 props.batchFinally = cbq.job( "notification", { message : "All done!" } );
+```
 
-// Struct definition (converted to job)
+#### Struct Definition
+
+Converted to a job automatically:
+
+```cfml
+props.batchThen = {
+    job : "reports.aggregate",
+    properties : { accountIDs : props.accountIDs },
+    queue : "default",
+    timeout : 300
+};
+
 props.batchFinally = {
     job : "reports.cleanup",
     properties : { bForce : true }
 };
+```
 
-// Array of jobs
+Supported struct keys: `job` (or `mapping`), `properties`, `chain` (or `chained`), `queue`, `connection`, `backoff`, `timeout`, `maxAttempts`
+
+#### Array of Jobs
+
+```cfml
+props.batchThen = [
+    cbq.job( "reports.aggregate", {} ),
+    cbq.job( "reports.validate", {} )
+];
+
 props.batchFinally = [
     cbq.job( "reports.summary", {} ),
     cbq.job( "notification", { message : "Reports complete" } )
@@ -106,7 +141,7 @@ props.batchFinally = [
    - `batchIndex` and `batchTotal` for progress tracking
    - `autoBatch = false` to prevent infinite recursion
 4. **Chain Preservation**: Any chained jobs are moved to the batch's `finally()` callback
-5. **Finally Append**: `batchFinally` is appended after existing chains
+5. **Execution Order**: `batchThen` → chained jobs → `batchFinally`
 6. **Dispatch**: The batch is dispatched and the parent job exits early
 
 ### Module Settings
@@ -115,12 +150,12 @@ Configure defaults in your `config/ColdBox.cfc`:
 
 ```cfml
 moduleSettings = {
-    cbqAutoBatch : {
+    "cbq-autobatch" : {
         defaultBatchSize : 10,
         defaultBatchQueue : "default",
         defaultMaxAttempts : 2,
         defaultBackoff : 60,
-        defaultTimeout : 2400,
+        defaultJobTimeout : 2400,
         defaultAllowFailures : true
     }
 };

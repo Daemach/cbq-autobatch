@@ -1,6 +1,6 @@
 component {
 
-	this.name         = "cbqAutoBatch";
+	this.name         = "cbq-autobatch";
 	this.author       = "John Wilson";
 	this.webUrl       = "https://github.com/Daemach/cbq-autobatch";
 	this.cfmapping    = "cbqAutoBatch";
@@ -16,8 +16,8 @@ component {
 			"defaultMaxAttempts" : 2,
 			// Default backoff in seconds between retries
 			"defaultBackoff" : 60,
-			// Default timeout in seconds
-			"defaultTimeout" : 2400,
+			// Default individual job timeout in seconds (40 minutes)
+			"defaultJobTimeout" : 2400,
 			// Allow failures by default
 			"defaultAllowFailures" : true
 		};

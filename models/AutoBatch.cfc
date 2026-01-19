@@ -9,11 +9,12 @@
  * - batchSize         : numeric (10)       - Items per batch
  * - batchQueue        : string ("default") - Queue/connection for batch jobs
  * - batchItemsKey     : string ("items")   - Key in props containing struct to chunk
- * - batchMaxAttempts  : numeric (2)        - Retry attempts per batch job
- * - batchBackoff      : numeric (60)       - Seconds between retries
- * - batchTimeout      : numeric (2400)     - Job timeout in seconds
+ * - batchMaxAttempts  : numeric (2)        - Max attempts per child job
+ * - batchBackoff      : numeric (60)       - Seconds between retries per child job
+ * - batchJobTimeout   : numeric (2400)     - Timeout per child job in seconds
  * - batchAllowFailures: boolean (true)     - Continue batch if some jobs fail
- * - batchFinally      : any                - Job/chain to append after chained jobs
+ * - batchThen         : any                - Job/chain to run immediately after batch, before chained jobs
+ * - batchFinally      : any                - Job/chain to run after all chained jobs complete
  * - batchCarryover    : array              - Props keys to pass to child jobs; if empty, passes ALL props
  *
  * Output props added to child jobs:
@@ -26,7 +27,7 @@
 component singleton threadsafe accessors="true" {
 
 	property name="cbq"      inject="cbq@cbq";
-	property name="settings" inject="coldbox:moduleSettings:cbqAutoBatch";
+	property name="settings" inject="coldbox:moduleSettings:cbq-autobatch";
 
 	/**
 	 * Evaluates whether a job should auto-batch and dispatches if threshold exceeded.
@@ -120,22 +121,28 @@ component singleton threadsafe accessors="true" {
 			jobProps.batchTotal = chunks.len();
 			jobProps.autoBatch = false; // Prevent infinite re-batching
 
-			batchItems.append( cbq.job( jobMapping, jobProps, [], "low", props.batchQueue ) );
+			var jobTimeout = props.batchJobTimeout ?: settings.defaultJobTimeout;
+			var jobMaxAttempts = props.batchMaxAttempts ?: settings.defaultMaxAttempts;
+			var jobBackoff = props.batchBackoff ?: settings.defaultBackoff;
+			batchItems.append(
+				cbq.job( jobMapping, jobProps, [], "low", props.batchQueue )
+					.setTimeout( jobTimeout )
+					.setMaxAttempts( jobMaxAttempts )
+					.setBackoff( jobBackoff )
+			);
 		}, true );
 
 		// Configure batch
 		var batch = cbq
 			.batch( batchItems )
-			.setQueue( "low" )
+			.onQueue( "low" )
 			.onConnection( props.batchQueue )
-			.setMaxAttempts( props.batchMaxAttempts ?: settings.defaultMaxAttempts )
-			.setBackoff( props.batchBackoff ?: settings.defaultBackoff )
-			.setAllowFailures( props.batchAllowFailures ?: settings.defaultAllowFailures )
-			.setTimeout( props.batchTimeout ?: settings.defaultTimeout );
+			.allowFailures( props.batchAllowFailures ?: settings.defaultAllowFailures );
 
 		// Transfer chained jobs to batch finally()
+		var batchThen = props.batchThen ?: "";
 		var batchFinally = props.batchFinally ?: "";
-		attachChainedJobs( batch, job, jobMapping, batchFinally );
+		attachChainedJobs( batch, job, jobMapping, batchThen, batchFinally );
 
 		notifyJob( job, "#jobName##chr( 9 )#=> Dispatching batch" );
 
@@ -144,18 +151,20 @@ component singleton threadsafe accessors="true" {
 
 	/**
 	 * Translates and attaches chained jobs to batch.finally()
-	 * Appends any provided finally job/chain after existing chained jobs.
-	 * If no chained jobs and no finally, adds a completion message job.
+	 * Execution order: batchThen → chained jobs → batchFinally
+	 * If no jobs provided, adds a default completion message.
 	 *
 	 * @batch      The cbq batch instance
 	 * @job        The originating job instance
 	 * @jobMapping The job mapping name for message
-	 * @finally    Optional job/chain to append after chained jobs
+	 * @then       Job/chain to run immediately after batch completes
+	 * @finally    Job/chain to run after all chained jobs complete
 	 */
 	private void function attachChainedJobs(
 		required any batch,
 		required any job,
 		required string jobMapping,
+		any then = "",
 		any finally = ""
 	) {
 		var chainedJobs = job.getChained();
@@ -166,14 +175,16 @@ component singleton threadsafe accessors="true" {
 			chainedJobs = [];
 		}
 
-		// Translate existing chained jobs
+		// 1. Add batchThen first (runs immediately after batch)
+		appendJobsToArray( translatedJobs, then );
+
+		// 2. Translate and add existing chained jobs
 		if ( chainedJobs.len() > 0 ) {
-			translatedJobs = chainedJobs.map( ( chain ) => {
-				// Guard: ensure chain is a struct
+			chainedJobs.each( ( chain ) => {
 				if ( !isStruct( chain ) ) {
-					return "";
+					return;
 				}
-				return cbq.job(
+				var translated = cbq.job(
 					job : safeGet( chain, "mapping", "", "string" ),
 					properties : safeGet( chain, "properties", {}, "struct" ),
 					chain : safeGet( chain, "chained", [], "array" ),
@@ -183,46 +194,58 @@ component singleton threadsafe accessors="true" {
 					timeout : safeGet( chain, "timeout", 60, "numeric" ),
 					maxAttempts : safeGet( chain, "maxAttempts", 1, "numeric" )
 				);
-			} ).filter( ( j ) => isObject( j ) );
+				if ( isObject( translated ) ) {
+					translatedJobs.append( translated );
+				}
+			} );
 		}
 
-		// Append finally job/chain if provided
-		if ( isSimpleValue( finally ) && len( finally ) == 0 ) {
-			// No finally provided - skip
-		} else if ( isArray( finally ) && finally.len() > 0 ) {
-			// Array of jobs - append each (filter out non-objects)
-			translatedJobs.append( finally.filter( ( j ) => isObject( j ) ), true );
-		} else if ( isObject( finally ) ) {
-			// Single job object
-			translatedJobs.append( finally );
-		} else if ( isStruct( finally ) && finally.count() > 0 ) {
-			// Struct definition - convert to job with null-safe accessors
-			var finallyJob = safeGet( finally, "job", safeGet( finally, "mapping", "", "string" ), "string" );
-			if ( len( finallyJob ) ) {
-				var finallyChain = safeGet( finally, "chain", safeGet( finally, "chained", [], "array" ), "array" );
-				translatedJobs.append( cbq.job(
-					job : finallyJob,
-					properties : safeGet( finally, "properties", {}, "struct" ),
-					chain : finallyChain,
-					queue : safeGet( finally, "queue", "default", "string" ),
-					connection : safeGet( finally, "connection", "default", "string" ),
-					backoff : safeGet( finally, "backoff", 0, "numeric" ),
-					timeout : safeGet( finally, "timeout", 60, "numeric" ),
-					maxAttempts : safeGet( finally, "maxAttempts", 1, "numeric" )
-				) );
-			}
-		}
+		// 3. Add batchFinally last (runs after all chained jobs)
+		appendJobsToArray( translatedJobs, finally );
 
 		// Attach to batch
 		if ( translatedJobs.len() > 0 ) {
 			batch.finally( cbq.chain( translatedJobs ) );
 		} else {
-			// Default completion message if nothing else
 			batch.finally( cbq.job( "message", {
 				message : "Batch job for #jobMapping# complete!",
 				bSeparator : 1,
 				bSeparatorBefore : 1
 			} ) );
+		}
+	}
+
+	/**
+	 * Appends job(s) to an array from various input formats.
+	 * Handles: job objects, arrays of jobs, struct definitions, or empty values.
+	 *
+	 * @target The array to append to
+	 * @source The job source (object, array, struct, or empty string)
+	 */
+	private void function appendJobsToArray( required array target, any source = "" ) {
+		if ( isSimpleValue( source ) && len( source ) == 0 ) {
+			return;
+		}
+
+		if ( isArray( source ) && source.len() > 0 ) {
+			target.append( source.filter( ( j ) => isObject( j ) ), true );
+		} else if ( isObject( source ) ) {
+			target.append( source );
+		} else if ( isStruct( source ) && source.count() > 0 ) {
+			var jobMapping = safeGet( source, "job", safeGet( source, "mapping", "", "string" ), "string" );
+			if ( len( jobMapping ) ) {
+				var jobChain = safeGet( source, "chain", safeGet( source, "chained", [], "array" ), "array" );
+				target.append( cbq.job(
+					job : jobMapping,
+					properties : safeGet( source, "properties", {}, "struct" ),
+					chain : jobChain,
+					queue : safeGet( source, "queue", "default", "string" ),
+					connection : safeGet( source, "connection", "default", "string" ),
+					backoff : safeGet( source, "backoff", 0, "numeric" ),
+					timeout : safeGet( source, "timeout", 60, "numeric" ),
+					maxAttempts : safeGet( source, "maxAttempts", 1, "numeric" )
+				) );
+			}
 		}
 	}
 
