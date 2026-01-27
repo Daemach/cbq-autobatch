@@ -7,7 +7,8 @@
  * Props contract (all in props, with defaults):
  * - autoBatch         : boolean (false)    - Enable auto-batching
  * - batchSize         : numeric (10)       - Items per batch
- * - batchQueue        : string ("default") - Queue/connection for batch jobs
+ * - batchQueue        : string ("default") - Queue for batch jobs
+ * - batchConnection   : string ("default") - Connection for batch jobs
  * - batchItemsKey     : string ("items")   - Key in props containing struct to chunk
  * - batchMaxAttempts  : numeric (2)        - Max attempts per child job
  * - batchBackoff      : numeric (60)       - Seconds between retries per child job
@@ -43,6 +44,7 @@ component singleton threadsafe accessors="true" {
 		param props.autoBatch = false;
 		param props.batchSize = settings.defaultBatchSize;
 		param props.batchQueue = settings.defaultBatchQueue;
+		param props.batchConnection = settings.defaultBatchConnection;
 		param props.batchItemsKey = "items";
 		param props.batchCarryover = [];
 
@@ -90,7 +92,7 @@ component singleton threadsafe accessors="true" {
 		var batchItems = [];
 
 		// Notify batch creation
-		notifyJob( job, "#jobName##chr( 9 )#=> Auto-batching (#props.batchQueue#) items:[#items.len()#] batches:[#chunks.len()#] per:[#props.batchSize#]" );
+		notifyJob( job, "#jobName##chr( 9 )#=> Auto-batching (queue:#props.batchQueue# connection:#props.batchConnection#) items:[#items.len()#] batches:[#chunks.len()#] per:[#props.batchSize#]" );
 
 		// Build batch job items
 		var excludeKeys = [ "logID", itemsKey, "batchCarryover" ];
@@ -125,7 +127,7 @@ component singleton threadsafe accessors="true" {
 			var jobMaxAttempts = props.batchMaxAttempts ?: settings.defaultMaxAttempts;
 			var jobBackoff = props.batchBackoff ?: settings.defaultBackoff;
 			batchItems.append(
-				cbq.job( jobMapping, jobProps, [], "low", props.batchQueue )
+				cbq.job( jobMapping, jobProps, [], props.batchQueue, props.batchConnection )
 					.setTimeout( jobTimeout )
 					.setMaxAttempts( jobMaxAttempts )
 					.setBackoff( jobBackoff )
@@ -135,8 +137,8 @@ component singleton threadsafe accessors="true" {
 		// Configure batch
 		var batch = cbq
 			.batch( batchItems )
-			.onQueue( "low" )
-			.onConnection( props.batchQueue )
+			.onQueue( props.batchQueue )
+			.onConnection( props.batchConnection )
 			.allowFailures( props.batchAllowFailures ?: settings.defaultAllowFailures );
 
 		// Transfer chained jobs to batch finally()

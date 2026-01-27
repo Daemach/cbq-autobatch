@@ -12,6 +12,8 @@ component {
 			"defaultBatchSize" : 10,
 			// Default queue for batch jobs
 			"defaultBatchQueue" : "default",
+			// Default connection for batch jobs
+			"defaultBatchConnection" : "default",
 			// Default max attempts per batch job
 			"defaultMaxAttempts" : 2,
 			// Default backoff in seconds between retries

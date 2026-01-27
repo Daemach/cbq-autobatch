@@ -57,7 +57,8 @@ All configuration lives in props (with sensible defaults):
 |------|---------|-------------|
 | `autoBatch` | `false` | Enable auto-batching |
 | `batchSize` | `10` | Items per batch |
-| `batchQueue` | `"default"` | Queue/connection for batch jobs |
+| `batchQueue` | `"default"` | Queue for batch jobs |
+| `batchConnection` | `"default"` | Connection for batch jobs |
 | `batchItemsKey` | `"items"` | Key in props containing struct to chunk |
 | `batchMaxAttempts` | `2` | Retry attempts per batch job |
 | `batchBackoff` | `60` | Seconds between retries |
@@ -153,6 +154,7 @@ moduleSettings = {
     "cbq-autobatch" : {
         defaultBatchSize : 10,
         defaultBatchQueue : "default",
+        defaultBatchConnection : "default",
         defaultMaxAttempts : 2,
         defaultBackoff : 60,
         defaultJobTimeout : 2400,
